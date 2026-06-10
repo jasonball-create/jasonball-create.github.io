@@ -682,14 +682,14 @@
                 currentEntries += 1;
                 spawnFloatingEntries(1);
                 
-                // Add daily attendance entry cleanly to feed pool
+                // Add daily Finder Friday entry cleanly to feed pool instead of Attendance
                 activeEntries.unshift({
                     id: String(activeEntries.length + 1),
-                    brand: "Attendance",
-                    action: "Daily Attendance Freebie",
-                    vertical: "Attendance",
-                    badgeCode: '<i class="fa-solid fa-calendar-check text-xs"></i>',
-                    bg: "bg-emerald-50 text-emerald-600 border border-emerald-100",
+                    brand: "Finder Friday",
+                    action: "Finder Friday",
+                    vertical: "Finder Friday",
+                    badgeCode: "ff",
+                    bg: "bg-amber-50 text-amber-700 border border-amber-200",
                     entries: 1,
                     date: "10 June 2026",
                     updates: "Applied successfully!"
