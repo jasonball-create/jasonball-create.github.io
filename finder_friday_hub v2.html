@@ -56,46 +56,42 @@
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* Metallic shine animation for buttons */
-        @keyframes shine {
-            100% {
-                left: 125%;
-            }
-        }
-        .shimmer-btn {
-            position: relative;
-            overflow: hidden;
-        }
-        .shimmer-btn::after {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -60%;
-            width: 30%;
-            height: 200%;
-            background: rgba(255, 255, 255, 0.35);
-            transform: rotate(30deg);
-            transition: none;
-            animation: shine 3s ease-in-out infinite;
-        }
-
-        /* Floating entries badge animations */
-        @keyframes floatUp {
+        /* Floating Entries (Fly towards Battery/Cumulative tracker) */
+        @keyframes flyToBattery {
             0% {
-                transform: translateY(10px) scale(0.8);
+                transform: translate(0, 0) scale(0.8);
                 opacity: 0;
             }
-            25% {
+            20% {
                 opacity: 1;
             }
             100% {
-                transform: translateY(-70px) scale(1.15);
+                transform: translate(var(--target-x, 150px), var(--target-y, -120px)) scale(1.1);
+                opacity: 0;
+            }
+        }
+
+        /* Floating Tickets (Fly towards Ticket card) */
+        @keyframes flyToTicket {
+            0% {
+                transform: translate(0, 0) scale(0.8);
+                opacity: 0;
+            }
+            20% {
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--target-x, 150px), var(--target-y, -50px)) scale(1.1);
                 opacity: 0;
             }
         }
 
         .floaty-entries {
-            animation: floatUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation: flyToBattery 1.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .floaty-tickets {
+            animation: flyToTicket 1.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         @keyframes subtleGlow {
@@ -128,9 +124,20 @@
                 opacity: 0;
             }
         }
+
+        /* Split-flap flip card aesthetic */
+        .split-card {
+            background: linear-gradient(to bottom, #1e293b 50%, #0f172a 50%);
+            border-radius: 6px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3), inset 0 -1px 0 rgba(255,255,255,0.1), inset 0 1px 0 rgba(255,255,255,0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col relative">
+
+    <!-- FLOATING SPANNER CONTAINER (Used as relative origin for coordinates) -->
+    <div id="global-particle-origin" class="absolute inset-0 pointer-events-none overflow-hidden z-50"></div>
 
     <!-- HIGH-FIDELITY NAVBAR -->
     <header class="w-full bg-white border-b border-slate-200 sticky top-0 z-40">
@@ -144,7 +151,7 @@
             <div class="flex items-center gap-4">
                 <div class="bg-blue-50 border border-blue-100 text-finderBlue px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5">
                     <i class="fa-solid fa-clock"></i>
-                    <span>Today: <strong>June 16, 2026</strong></span>
+                    <span>Today: <strong>June 22, 2026</strong></span>
                 </div>
                 <div class="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center font-black border-2 border-white/20 select-none text-sm">J</div>
             </div>
@@ -188,17 +195,18 @@
     </header>
 
     <!-- MAIN DASHBOARD -->
-    <main class="flex-1 max-w-[1500px] w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    <!-- STREAMNING_CHUNK: Structuring layout dashboard grids... -->
+    <main class="flex-grow max-w-[1500px] w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         <!-- LEFT COLUMN: PROMOTIONS & GROUPED WORKFLOWS (Spans 8 columns) -->
         <section id="ev-giveaway-section" class="lg:col-span-8 space-y-6 transition-all duration-500">
             
-            <!-- TYPOGRAPHIC HEADER BANNER (CLEANED UP & SIMPLIFIED) -->
+            <!-- TYPOGRAPHIC HEADER BANNER -->
             <div class="flex flex-col md:flex-row items-center justify-between bg-gradient-to-br from-blue-50/30 via-white to-white border border-slate-200 rounded-3xl p-6 gap-6 shadow-sm">
                 <div class="space-y-1.5 flex-grow text-center md:text-left">
                     <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Hey Jason!</h1>
                     <p class="text-xs sm:text-sm text-slate-500 max-w-xl font-medium leading-relaxed" id="mascot-speech">
-                        Complete any action below to build up your overall entries for the EV Giveaway. Keep comparing and tracking to win!
+                        Earn Friday Tickets and EV Draw entries below. Remember, Friday tickets automatically feed into your overall EV balance as well!
                     </p>
                 </div>
                 <div class="w-48 h-20 flex-shrink-0 flex items-center justify-center overflow-hidden">
@@ -227,21 +235,36 @@
                         </div>
                         <h3 class="text-base font-black text-slate-900 leading-none">Finder Friday's $200 Giveaway</h3>
                         
-                        <!-- Mini timer alignment -->
-                        <div class="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
-                            <span class="text-[10px] font-black uppercase text-slate-400">Closes in:</span>
-                            <div class="flex items-center gap-1 font-mono text-[11px]">
-                                <span id="timer-days" class="text-finderBlue font-bold bg-blue-50 px-1 rounded border border-blue-100">00</span>:
-                                <span id="timer-hours" class="text-finderBlue font-bold bg-blue-50 px-1 rounded border border-blue-100">00</span>:
-                                <span id="timer-mins" class="text-finderBlue font-bold bg-blue-50 px-1 rounded border border-blue-100">00</span>:
-                                <span id="timer-secs" class="text-red-600 font-bold bg-red-50 px-1 rounded border border-red-100">00</span>
+                        <!-- HIGH-TECH SPLIT-FLAP COUNTDOWN TIMER -->
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1 text-slate-500 font-semibold">
+                            <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Closes in:</span>
+                            <div class="flex items-center gap-1 text-[11px] text-white">
+                                <div class="flex flex-col items-center">
+                                    <div id="timer-days" class="split-card font-mono font-black text-xs px-2 py-1 text-teal-400 min-w-[28px] text-center">00</div>
+                                    <span class="text-[7px] font-black uppercase text-slate-400 mt-1">Days</span>
+                                </div>
+                                <span class="text-slate-400 font-black pb-3 animate-pulse">:</span>
+                                <div class="flex flex-col items-center">
+                                    <div id="timer-hours" class="split-card font-mono font-black text-xs px-2 py-1 text-teal-400 min-w-[28px] text-center">00</div>
+                                    <span class="text-[7px] font-black uppercase text-slate-400 mt-1">Hours</span>
+                                </div>
+                                <span class="text-slate-400 font-black pb-3 animate-pulse">:</span>
+                                <div class="flex flex-col items-center">
+                                    <div id="timer-mins" class="split-card font-mono font-black text-xs px-2 py-1 text-teal-400 min-w-[28px] text-center">00</div>
+                                    <span class="text-[7px] font-black uppercase text-slate-400 mt-1">Mins</span>
+                                </div>
+                                <span class="text-slate-400 font-black pb-3 animate-pulse">:</span>
+                                <div class="flex flex-col items-center">
+                                    <div id="timer-secs" class="split-card font-mono font-black text-xs px-2 py-1 text-rose-500 min-w-[28px] text-center">00</div>
+                                    <span class="text-[7px] font-black uppercase text-slate-400 mt-1">Secs</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-3.5 z-10 px-2 flex-shrink-0 w-full md:w-auto justify-between md:justify-end">
-                    <div class="text-[10px] uppercase font-black text-slate-400 tracking-wider">
+                    <div class="text-[10px] uppercase font-black text-slate-400 tracking-wider text-right hidden sm:block leading-tight">
                         Earns +1 Friday Ticket <span class="block text-slate-500 text-[11px] font-bold lowercase">+1 EV entry</span>
                     </div>
                     <button id="claim-daily-btn" onclick="claimDailyEntry(event)" class="bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs px-5 py-2.5 rounded-xl transition-all focus:outline-none shimmer-btn flex items-center gap-1.5 active:scale-95 duration-150 min-w-[135px] justify-center shadow-sm">
@@ -257,7 +280,7 @@
                 <div class="space-y-4">
                     <div class="flex items-center justify-between pb-1 border-b border-slate-200">
                         <h4 class="text-xs font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
-                            <i class="fa-solid fa-ticket-simple text-finderBlue text-xs"></i> Finder Friday + EV Quests
+                            <i class="fa-solid fa-ticket-simple text-finderBlue text-xs"></i> Friday Tickets + EV Boost
                         </h4>
                     </div>
 
@@ -274,7 +297,9 @@
                                 </div>
                             </div>
                             <div class="flex items-center justify-between pt-1 border-t border-slate-50 text-xs">
-                                <span class="font-extrabold text-blue-600">+50 Tickets / +50 EV</span>
+                                <span class="font-extrabold text-blue-600 flex items-center gap-1">
+                                    <i class="fa-solid fa-ticket-simple text-[10px]"></i> +50 Friday Tickets (+50 EV)
+                                </span>
                                 <button onclick="completeQuest(4, 50, true, event)" id="quest-btn-4" class="bg-finderBlue hover:bg-blue-700 text-white font-extrabold text-[11px] px-3.5 py-1.5 rounded-lg transition-all focus:outline-none shadow-sm min-w-[95px] text-center">
                                     Refer Friend
                                 </button>
@@ -293,7 +318,9 @@
                                 </div>
                             </div>
                             <div class="flex items-center justify-between pt-1 border-t border-slate-50 text-xs">
-                                <span class="font-extrabold text-blue-600">+10 Tickets / +10 EV</span>
+                                <span class="font-extrabold text-blue-600 flex items-center gap-1">
+                                    <i class="fa-solid fa-ticket-simple text-[10px]"></i> +10 Friday Tickets (+10 EV)
+                                </span>
                                 <button onclick="completeQuest(5, 10, true, event)" id="quest-btn-5" class="bg-finderBlue hover:bg-blue-700 text-white font-extrabold text-[11px] px-3.5 py-1.5 rounded-lg transition-all focus:outline-none shadow-sm min-w-[95px] text-center">
                                     Take Quiz
                                 </button>
@@ -312,7 +339,9 @@
                                 </div>
                             </div>
                             <div class="flex items-center justify-between pt-1 border-t border-slate-50 text-xs">
-                                <span class="font-extrabold text-blue-600">+10 Tickets / +10 EV</span>
+                                <span class="font-extrabold text-blue-600 flex items-center gap-1">
+                                    <i class="fa-solid fa-ticket-simple text-[10px]"></i> +10 Friday Tickets (+10 EV)
+                                </span>
                                 <button onclick="completeQuest(6, 10, true, event)" id="quest-btn-6" class="bg-finderBlue hover:bg-blue-700 text-white font-extrabold text-[11px] px-3.5 py-1.5 rounded-lg transition-all focus:outline-none shadow-sm min-w-[95px] text-center">
                                     Take Quiz
                                 </button>
@@ -331,7 +360,9 @@
                                 </div>
                             </div>
                             <div class="flex items-center justify-between pt-1 border-t border-slate-50 text-xs">
-                                <span class="font-extrabold text-blue-600">+10 Tickets / +10 EV</span>
+                                <span class="font-extrabold text-blue-600 flex items-center gap-1">
+                                    <i class="fa-solid fa-ticket-simple text-[10px]"></i> +10 Friday Tickets (+10 EV)
+                                </span>
                                 <button onclick="completeQuest(7, 10, true, event)" id="quest-btn-7" class="bg-finderBlue hover:bg-blue-700 text-white font-extrabold text-[11px] px-3.5 py-1.5 rounded-lg transition-all focus:outline-none shadow-sm min-w-[95px] text-center">
                                     Take Quiz
                                 </button>
@@ -350,7 +381,9 @@
                                 </div>
                             </div>
                             <div class="flex items-center justify-between pt-1 border-t border-slate-50 text-xs">
-                                <span class="font-extrabold text-blue-600">+10 Tickets / +10 EV</span>
+                                <span class="font-extrabold text-blue-600 flex items-center gap-1">
+                                    <i class="fa-solid fa-ticket-simple text-[10px]"></i> +10 Friday Tickets (+10 EV)
+                                </span>
                                 <button onclick="completeQuest(8, 10, true, event)" id="quest-btn-8" class="bg-finderBlue hover:bg-blue-700 text-white font-extrabold text-[11px] px-3.5 py-1.5 rounded-lg transition-all focus:outline-none shadow-sm min-w-[95px] text-center">
                                     Take Quiz
                                 </button>
@@ -359,73 +392,73 @@
                     </div>
                 </div>
 
-                <!-- COLUMN B: EV CAR DRAW ONLY EXCLUSIVES (Sleek Slate Themes) -->
+                <!-- COLUMN B: EV CAR DRAW ONLY EXCLUSIVES (Sleek Slate Themes - Perfectly Aligned) -->
                 <div class="space-y-4">
                     <div class="flex items-center justify-between pb-1 border-b border-slate-200">
                         <h4 class="text-xs font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
-                            <i class="fa-solid fa-car-side text-slate-700 text-xs"></i> EV Car Draw Exclusives
+                            <i class="fa-solid fa-car-side text-slate-700 text-xs"></i> EV Grand Draw Exclusives
                         </h4>
                     </div>
 
                     <div class="space-y-3.5">
                         <!-- Upload Credit Score (+500 EV Only) -->
-                        <div id="quest-card-1" class="quest-card border border-slate-200/80 bg-slate-900 hover:border-cyan-500 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-sm hover:shadow-md transition-all duration-300 text-white">
+                        <div id="quest-card-1" class="quest-card border border-slate-200/80 bg-white hover:border-blue-200 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-sm hover:shadow-md transition-all duration-300">
                             <div class="flex items-start gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-800 text-cyan-400 flex items-center justify-center flex-shrink-0 border border-slate-700">
-                                    <i class="fa-solid fa-file-arrow-up text-sm animate-pulse"></i>
+                                <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0 border border-amber-100">
+                                    <i class="fa-solid fa-file-arrow-up text-sm"></i>
                                 </div>
                                 <div class="space-y-0.5">
-                                    <h5 class="text-sm font-bold text-white leading-tight">Upload Credit Score</h5>
-                                    <p class="text-[11px] text-slate-400 font-semibold leading-tight">Track credit score changes instantly.</p>
+                                    <h5 class="text-sm font-bold text-slate-900 leading-tight">Upload Credit Score</h5>
+                                    <p class="text-[11px] text-slate-400 font-semibold leading-tight">Track credit score changes instantly over time.</p>
                                 </div>
                             </div>
-                            <div class="flex items-center justify-between pt-1 border-t border-slate-800 text-xs">
-                                <span class="font-extrabold text-cyan-400 flex items-center gap-1">
+                            <div class="flex items-center justify-between pt-1 border-t border-slate-50 text-xs">
+                                <span class="font-extrabold text-amber-600 flex items-center gap-1">
                                     <i class="fa-solid fa-car-side text-[10px]"></i> +500 EV Entries Only
                                 </span>
-                                <button onclick="completeQuest(1, 500, false, event)" id="quest-btn-1" class="bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black text-[11px] px-3.5 py-1.5 rounded-lg transition-all focus:outline-none shadow-sm min-w-[95px] text-center">
+                                <button onclick="completeQuest(1, 500, false, event)" id="quest-btn-1" class="bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-[11px] px-3.5 py-1.5 rounded-lg transition-all focus:outline-none shadow-sm min-w-[95px] text-center">
                                     Upload
                                 </button>
                             </div>
                         </div>
 
                         <!-- Add a My Product (+500 EV Only) -->
-                        <div id="quest-card-2" class="quest-card border border-slate-200/80 bg-slate-900 hover:border-cyan-500 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-sm hover:shadow-md transition-all duration-300 text-white">
+                        <div id="quest-card-2" class="quest-card border border-slate-200/80 bg-white hover:border-blue-200 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-sm hover:shadow-md transition-all duration-300">
                             <div class="flex items-start gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-800 text-cyan-400 flex items-center justify-center flex-shrink-0 border border-slate-700">
-                                    <i class="fa-solid fa-folder-plus text-sm"></i>
+                                <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 border border-emerald-100">
+                                    <i class="fa-solid fa-folder-plus text-lg"></i>
                                 </div>
-                                <div class="space-y-0.5">
-                                    <h5 class="text-sm font-bold text-white leading-tight">Add a My Product</h5>
-                                    <p class="text-[11px] text-slate-400 font-semibold leading-tight">Organize and manage active utility bills.</p>
+                                <div class="space-y-1">
+                                    <h5 class="text-base font-black text-slate-900 leading-tight">Add a My Product</h5>
+                                    <p class="text-xs text-slate-500 leading-relaxed font-semibold">Organize and manage active household utilities.</p>
                                 </div>
                             </div>
-                            <div class="flex items-center justify-between pt-1 border-t border-slate-800 text-xs">
-                                <span class="font-extrabold text-cyan-400 flex items-center gap-1">
+                            <div class="flex items-center justify-between pt-1 border-t border-slate-50 text-xs">
+                                <span class="font-extrabold text-amber-600 flex items-center gap-1">
                                     <i class="fa-solid fa-car-side text-[10px]"></i> +500 EV Entries Only
                                 </span>
-                                <button onclick="completeQuest(2, 500, false, event)" id="quest-btn-2" class="bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black text-[11px] px-3.5 py-1.5 rounded-lg transition-all focus:outline-none shadow-sm min-w-[95px] text-center">
+                                <button onclick="completeQuest(2, 500, false, event)" id="quest-btn-2" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all focus:outline-none min-w-[100px] text-center">
                                     Add Product
                                 </button>
                             </div>
                         </div>
 
                         <!-- Purchase a Finder Reward (+1000 EV Only) -->
-                        <div id="quest-card-3" class="quest-card border border-slate-200/80 bg-slate-900 hover:border-cyan-500 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-sm hover:shadow-md transition-all duration-300 text-white">
+                        <div id="quest-card-3" class="quest-card border border-slate-200/80 bg-white hover:border-blue-200 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-sm hover:shadow-md transition-all duration-300">
                             <div class="flex items-start gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-800 text-cyan-400 flex items-center justify-center flex-shrink-0 border border-slate-700">
+                                <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 border border-blue-100">
                                     <i class="fa-solid fa-cart-shopping text-sm"></i>
                                 </div>
                                 <div class="space-y-0.5">
-                                    <h5 class="text-sm font-bold text-white leading-tight">Purchase a Reward</h5>
-                                    <p class="text-[11px] text-slate-400 font-semibold leading-tight">Verify any qualifying cashback purchase.</p>
+                                    <h5 class="text-sm font-bold text-slate-900 leading-tight">Purchase a Reward</h5>
+                                    <p class="text-[11px] text-slate-400 font-semibold leading-tight">Claim qualifying cashback offers securely on site.</p>
                                 </div>
                             </div>
-                            <div class="flex items-center justify-between pt-1 border-t border-slate-800 text-xs">
-                                <span class="font-extrabold text-cyan-400 flex items-center gap-1">
+                            <div class="flex items-center justify-between pt-1 border-t border-slate-50 text-xs">
+                                <span class="font-extrabold text-amber-600 flex items-center gap-1">
                                     <i class="fa-solid fa-car-side text-[10px]"></i> +1,000 EV Entries Only
                                 </span>
-                                <button onclick="completeQuest(3, 1000, false, event)" id="quest-btn-3" class="bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black text-[11px] px-3.5 py-1.5 rounded-lg transition-all focus:outline-none shadow-sm min-w-[95px] text-center">
+                                <button onclick="completeQuest(3, 1000, false, event)" id="quest-btn-3" class="bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-[11px] px-3.5 py-1.5 rounded-lg transition-all focus:outline-none shadow-sm min-w-[95px] text-center">
                                     Purchase
                                 </button>
                             </div>
@@ -451,14 +484,14 @@
                 </button>
             </div>
 
-            <!-- INTEGRATED SPLIT METRICS PANEL -->
-            <div class="border border-slate-200 rounded-2xl p-5 bg-gradient-to-br from-blue-50/20 via-white to-white space-y-5 relative overflow-hidden shadow-sm">
+            <!-- INTEGRATED SPLIT METRICS PANEL (PLAIN WHITE WITH REQUESTED PLAIN VALUES) -->
+            <!-- STREAMNING_CHUNK: Creating plain white metrics widgets... -->
+            <div class="border border-slate-200 rounded-2xl p-5 bg-white space-y-5 relative overflow-hidden shadow-sm">
                 <!-- Float-Up Animation spawner -->
                 <div id="floaty-container" class="absolute left-1/2 top-4 transform -translate-x-1/2 pointer-events-none z-50"></div>
-                <div class="absolute top-0 right-0 w-32 h-32 bg-radial-gradient from-amber-400/5 to-transparent pointer-events-none rounded-full"></div>
 
                 <!-- TALLY 1: EV GIVEAWAY (Cumulative Pool) -->
-                <div class="space-y-1.5 relative z-10">
+                <div id="battery-tracker-card" class="space-y-1.5 relative z-10">
                     <div class="flex items-center justify-between">
                         <span class="text-[10px] uppercase font-black text-slate-400 flex items-center gap-1">
                             <i class="fa-solid fa-car-side text-slate-600"></i> EV Giveaway Pool (Cumulative)
@@ -476,7 +509,7 @@
                 </div>
 
                 <!-- TALLY 2: FINDER FRIDAY COMPETITION TICKETS -->
-                <div class="pt-4 border-t border-slate-100 space-y-1 relative z-10">
+                <div id="ticket-tracker-card" class="pt-4 border-t border-slate-100 space-y-1 relative z-10">
                     <span class="text-[10px] uppercase font-black text-slate-400 flex items-center gap-1">
                         <i class="fa-solid fa-ticket-simple text-finderBlue"></i> This Friday's Draw Tickets
                     </span>
@@ -485,15 +518,13 @@
                             <span class="text-3xl font-black tracking-tight text-finderBlue" id="friday-tickets-display">0</span>
                             <span class="text-[10px] font-black text-finderBlue uppercase tracking-widest">Tickets</span>
                         </div>
-                        <span class="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-0.5 rounded-full select-none" id="tickets-status-pill">
-                            Inactive
-                        </span>
+                        <span class="text-[10px] font-extrabold text-slate-500 bg-slate-50 border border-slate-200/60 px-2.5 py-0.5 rounded-full select-none" id="tickets-status-pill">Inactive</span>
                     </div>
                 </div>
             </div>
 
             <!-- COMPACT VERTICAL ACTIVITY FEED -->
-            <div class="space-y-3 max-h-[380px] overflow-y-auto pr-1 custom-scrollbar" id="rewards-list-container">
+            <div class="space-y-3 max-h-[350px] overflow-y-auto pr-1 custom-scrollbar" id="rewards-list-container">
                 <!-- Injected dynamically by state logic below -->
             </div>
 
@@ -543,7 +574,6 @@
         const progressRatio = document.getElementById('progress-ratio');
         const progressBar = document.getElementById('progress-bar');
         const ticketsStatusPill = document.getElementById('tickets-status-pill');
-        const floatyContainer = document.getElementById('floaty-container');
         const speechBubble = document.getElementById('mascot-speech');
 
         // Dynamic list renderer (Cleaned up, distinct categorizations)
@@ -607,9 +637,9 @@
             progressBar.style.width = `${percentage}%`;
         }
 
-        // Timer target Friday, June 19, 2026, 3:00 PM (15:00:00 AEST)
+        // Timer target Friday, June 26, 2026, 3:00 PM (15:00:00 AEST)
         function startCountdown() {
-            const targetDate = new Date("June 19, 2026 15:00:00").getTime();
+            const targetDate = new Date("June 26, 2026 15:00:00").getTime();
             
             const timerInterval = setInterval(function() {
                 const now = new Date().getTime();
@@ -678,7 +708,7 @@
             setTimeout(() => {
                 currentEntries += 1;
                 fridayTickets += 1;
-                spawnFloatingEntries(1, true);
+                spawnFloatingEntries(event, 1, true); // Friday Tickets particle
 
                 activeEntries.unshift({
                     id: String(activeEntries.length + 1),
@@ -688,7 +718,7 @@
                     badgeCode: "ff",
                     bg: "bg-amber-50 text-amber-700 border border-amber-200",
                     entries: 1,
-                    date: "16 June 2026",
+                    date: "22 June 2026",
                     updates: "Applied successfully!",
                     group: "Friday + EV",
                     icon: "fa-ticket"
@@ -762,7 +792,7 @@
                     badgeCode: itemBadge,
                     bg: itemBg,
                     entries: baseEntries,
-                    date: "16 June 2026",
+                    date: "22 June 2026",
                     updates: "Applied successfully!",
                     group: groupLabel
                 });
@@ -772,7 +802,9 @@
                     fridayTickets += baseEntries; // Quizzes and referrals add straight tickets to weekly Friday draw
                 }
 
-                spawnFloatingEntries(baseEntries, isFridayEligible);
+                // Dual particle flight mechanics spawned relative to click target
+                spawnFloatingEntries(event, baseEntries, isFridayEligible);
+
                 renderTable();
                 updateDashboardUI();
 
@@ -781,38 +813,85 @@
 
                 speechBubble.textContent = `Excellent work! You earned +${baseEntries} entries. ${isFridayEligible ? 'These were successfully loaded into both drawing ledgers!' : 'These are logged for the EV Draw pool!'}`;
 
-                // Recyle buttons back to active state so users can run repetitive simulation loops
+                // Recycle buttons back to active state so users can run repetitive simulation loops
                 setTimeout(() => {
                     btn.disabled = false;
                     btn.innerHTML = originalText;
                     if (isFridayEligible) {
                         btn.className = "bg-finderBlue hover:bg-blue-700 text-white font-extrabold text-[11px] px-3.5 py-1.5 rounded-lg transition-all focus:outline-none shadow-sm min-w-[95px] text-center";
                     } else {
-                        btn.className = "bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black text-[11px] px-3.5 py-1.5 rounded-lg transition-all focus:outline-none shadow-sm min-w-[95px] text-center";
+                        btn.className = "bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-[11px] px-3.5 py-1.5 rounded-lg transition-all focus:outline-none shadow-sm min-w-[95px] text-center";
                     }
                 }, 2200);
 
             }, 1000);
         }
 
-        // Spawn floaters above metrics block
-        function spawnFloatingEntries(entries, isFridayEligible) {
-            const element = document.createElement('div');
-            element.className = 'floaty-entries absolute font-black text-2xl tracking-wide select-none z-50';
-            if (isFridayEligible) {
-                element.className += ' text-finderBlue';
-                element.textContent = `+${entries} TICKETS`;
-            } else {
-                element.className += ' text-amber-500';
-                element.textContent = `+${entries} ENTRIES`;
-            }
-            floatyContainer.appendChild(element);
+        // Re-engineered Floating Particles (computes screen coordinates relative to clicked button targets)
+        function spawnFloatingEntries(event, entries, isFridayEligible) {
+            const container = document.getElementById('global-particle-origin');
+            const rect = event.currentTarget.getBoundingClientRect();
+            
+            // Center of clicked target button
+            const clickX = rect.left + rect.width / 2 + window.scrollX;
+            const clickY = rect.top + rect.height / 2 + window.scrollY;
 
-            setTimeout(() => {
-                element.remove();
-            }, 1200);
+            // Target A: The Battery Metre Card
+            const batteryCard = document.getElementById('battery-tracker-card');
+            const batRect = batteryCard.getBoundingClientRect();
+            const batX = batRect.left + batRect.width / 2 + window.scrollX;
+            const batY = batRect.top + batRect.height / 2 + window.scrollY;
+
+            // Target B: The Ticket Stub Card
+            const ticketCard = document.getElementById('ticket-tracker-card');
+            const tickRect = ticketCard.getBoundingClientRect();
+            const tickX = tickRect.left + tickRect.width / 2 + window.scrollX;
+            const tickY = tickRect.top + tickRect.height / 2 + window.scrollY;
+
+            // Trigger EV Entries Particle (Floats toward Battery/Tank)
+            const evElement = document.createElement('div');
+            evElement.className = 'floaty-entries absolute text-amber-500 font-black text-xs tracking-wide select-none z-50 pointer-events-none bg-slate-950 px-2 py-1 rounded border border-amber-300';
+            evElement.textContent = `+${entries} EV`;
+            evElement.style.left = `${clickX}px`;
+            evElement.style.top = `${clickY}px`;
+            evElement.style.setProperty('--target-x', `${batX - clickX}px`);
+            evElement.style.setProperty('--target-y', `${batY - clickY}px`);
+            container.appendChild(evElement);
+            setTimeout(() => evElement.remove(), 1300);
+
+            // Trigger Friday Tickets Particle if eligible (Floats toward Ticket Stub)
+            if (isFridayEligible) {
+                const tickElement = document.createElement('div');
+                tickElement.className = 'floaty-tickets absolute text-finderBlue font-black text-xs tracking-wide select-none z-50 pointer-events-none bg-blue-50 px-2 py-1 rounded border border-blue-200';
+                tickElement.textContent = `+${entries} Tickets`;
+                tickElement.style.left = `${clickX}px`;
+                tickElement.style.top = `${clickY - 25}px`; // Offset above the EV particle
+                tickElement.style.setProperty('--target-x', `${tickX - clickX}px`);
+                tickElement.style.setProperty('--target-y', `${tickY - (clickY - 25)}px`);
+                container.appendChild(tickElement);
+                setTimeout(() => tickElement.remove(), 1300);
+            }
         }
 
+        // Target offset algorithms helpers
+        function targetXOffset(entries) {
+            if (entries >= 50) return -40;
+            return 20;
+        }
+        function leadX(clickX, rect, isFriday) {
+            return clickX + (isFriday ? -30 : 30);
+        }
+        function leadY(clickY) {
+            return clickY - 25;
+        }
+        function elementStyle(el, x, y, dx, dy) {
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+            el.style.setProperty('--target-x', dx);
+            el.style.setProperty('--target-y', dy);
+        }
+
+        // Interactive tab scrolling to the EV giveaway card panel
         function scrollToEvSection(event) {
             event.preventDefault();
             const section = document.getElementById('ev-giveaway-section');
